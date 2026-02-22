@@ -26,3 +26,34 @@ AI-powered resume optimizer that:
 - [ ] Reflex UI
 - [ ] LLM resume rewriting
 - [ ] Semantic JD understanding
+
+## Local API (Shared by Web + Extension)
+
+Run the local scoring API:
+
+```powershell
+venv\Scripts\python.exe local_api.py
+```
+
+Health check:
+
+```powershell
+curl http://127.0.0.1:8787/health
+```
+
+## Reflex Website
+
+Run the Reflex app:
+
+```powershell
+cd web
+..\venv\Scripts\python.exe -m reflex run
+```
+
+## Chrome Extension (MV3)
+
+1. Open `chrome://extensions`
+2. Enable Developer Mode
+3. Click `Load unpacked`
+4. Select the `extension/` folder
+5. Keep `local_api.py` running, then use extension popup on a JD tab

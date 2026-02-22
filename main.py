@@ -1,68 +1,83 @@
 from jd_parser import JDParser
 from eligibility_engine import EligibilityEngine
-from ats_engine import ATSEngine
+from ats_engine import ATSEngine  # legacy basic matcher (optional)
 from resume_parser import ResumeParser
 from resume_reader import ResumeReader
 from weighted_ats import WeightedATSEngine
+from ats_weighted_skill import WeightedSkillMatcher
 
-# ===============================
-# STEP 1: Read Resume
-# ===============================
-resume_path = "data\MohanAbhijeethAccenture.pdf"  # ✅ corrected path
 
-reader = ResumeReader(resume_path)
-resume_text = reader.extract_text()
+def main() -> None:
+    print("\n========== RESUMELYTICS PIPELINE START ==========\n")
 
-resume_parser = ResumeParser(resume_text)
-candidate_data = resume_parser.parse()
+    # ======================================================
+    # STEP 1: Read Resume
+    # ======================================================
+    resume_path = "data/MohanAbhijeethAccenture.pdf"
 
-print("Candidate Data:", candidate_data)
+    reader = ResumeReader(resume_path)
+    resume_text = reader.extract_text()
 
-# ===============================
-# STEP 2: Parse JD
-# ===============================
-jd_sample = """
-Design, develop, and maintain data pipelines and ETL processes using AWS and Snowflake.
-Strong proficiency in AWS and Snowflake. Looking for candidates with 3+ years of experience.
-Preferred skills are basics in AIML.
-"""
+    resume_parser = ResumeParser(resume_text)
+    candidate_data = resume_parser.parse()
 
-jd_parser = JDParser(jd_sample)
-result = jd_parser.parse()
+    print("Candidate Data:", candidate_data)
 
-print("JD Data:", result)
+    # ======================================================
+    # STEP 2: Parse JD
+    # ======================================================
+    jd_sample = """
+    Design, develop, and maintain data pipelines and ETL processes using AWS and Snowflake.
+    Strong proficiency in AWS and Snowflake. Looking for candidates with 3+ years of experience.
+    Preferred skills are basics in AIML.
+    """
 
-# ===============================
-# STEP 3: Build candidate profile
-# ===============================
-candidate_profile = {
-    "experience": candidate_data.get("experience")
-}
+    jd_parser = JDParser(jd_sample)
+    result = jd_parser.parse()
 
-# ===============================
-# STEP 4: Eligibility Check
-# ===============================
-engine = EligibilityEngine(result, candidate_profile)
-decision = engine.evaluate()
+    print("JD Data:", result)
 
-print("Eligibility:", decision)
+    # ======================================================
+    # STEP 3: Eligibility Check
+    # ======================================================
+    candidate_profile = {
+        "experience": candidate_data.get("experience"),
+        "skills": candidate_data.get("skills", []),
+    }
 
-if not decision["eligible"]:
-    print("You might not be a good fit, so better ignore!")
-else:
-    # ===============================
-    # STEP 5: ATS Skill Match
-    # ===============================
+    engine = EligibilityEngine(result, candidate_profile)
+    decision = engine.evaluate()
+
+    print("Eligibility:", decision)
+
+    if not decision["eligible"]:
+        print("❌ You might not be a good fit, so better ignore!")
+        return
+
+    # ======================================================
+    # STEP 4: (Optional) Basic ATS Match
+    # ======================================================
     ats = ATSEngine(result["skills"], candidate_data["skills"])
     ats_result = ats.compute_skill_match()
+    print("Basic ATS Result:", ats_result)
 
-    print("ATS Result:", ats_result)
+    # ======================================================
+    # STEP 5: Required vs Preferred Skill Matching (CORE)
+    # ======================================================
+    skill_engine = WeightedSkillMatcher(
+        required_skills=result["required_skills"],
+        preferred_skills=result["preferred_skills"],
+        candidate_skills=candidate_data["skills"],
+    )
 
-    # ===============================
-    # STEP 6: Weighted ATS Score
-    # ===============================
+    skill_result = skill_engine.compute()
+    print("Weighted Skill Result:", skill_result)
+
+    # ======================================================
+    # STEP 6: Final Weighted ATS Score
+    # ======================================================
     weighted = WeightedATSEngine(
-        skill_match_percent=ats_result["skill_match_percent"],
+        skill_match_percent=skill_result["final_skill_score"],  # ✅ correct signal
         candidate_experience=candidate_data.get("experience"),
         required_experience=result.get("experience_required"),
         resume_text=resume_text,
@@ -71,4 +86,13 @@ else:
     )
 
     weighted_result = weighted.compute()
-    print("Weighted ATS:", weighted_result)
+    print("Final Weighted ATS:", weighted_result)
+
+    print("\n========== RESUMELYTICS PIPELINE END ==========\n")
+
+
+# ======================================================
+# ENTRY POINT
+# ======================================================
+if __name__ == "__main__":
+    main()

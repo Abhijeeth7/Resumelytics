@@ -84,6 +84,22 @@ class JDParser:
     # =========================================
     # NEW: Required vs Preferred Classification
     # =========================================
+    def _skill_variants(self, skill: str) -> List[str]:
+        skill_l = skill.lower()
+        variants = {skill_l}
+
+        # canonical -> aliases
+        if skill_l in SKILL_ALIASES:
+            variants.update(alias.lower() for alias in SKILL_ALIASES[skill_l])
+
+        # alias -> canonical
+        for canonical, aliases in SKILL_ALIASES.items():
+            if skill_l in (alias.lower() for alias in aliases):
+                variants.add(canonical.lower())
+                variants.update(alias.lower() for alias in aliases)
+
+        return sorted(variants)
+
     def classify_skills(self) -> Dict[str, List[str]]:
         base_skills = self.extract_skills()
         text = self.cleaned_text.lower()
@@ -92,9 +108,11 @@ class JDParser:
         preferred = set()
 
         for skill in base_skills:
-            pattern = r".{0,80}" + re.escape(skill) + r".{0,80}"
-            matches = re.findall(pattern, text)
-            context = " ".join(matches)
+            contexts: List[str] = []
+            for variant in self._skill_variants(skill):
+                pattern = r".{0,80}" + re.escape(variant) + r".{0,80}"
+                contexts.extend(re.findall(pattern, text))
+            context = " ".join(contexts)
 
             if any(hint in context for hint in REQUIRED_HINTS):
                 required.add(skill)

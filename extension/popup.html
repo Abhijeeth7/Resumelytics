@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Resumelytics</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Resumelytics</h1>
+      <p class="hint">Scores your resume against the current tab's JD text.</p>
+
+      <label for="resumeText">Resume Text</label>
+      <textarea id="resumeText" placeholder="Paste resume text"></textarea>
+
+      <label for="experience">Experience (optional years)</label>
+      <input id="experience" type="number" min="0" step="1" placeholder="e.g. 3" />
+
+      <button id="analyzeBtn">Analyze Current Tab</button>
+      <pre id="result"></pre>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
